@@ -1,0 +1,241 @@
+
+{
+  "products": {
+    "1": {
+      "id": "1",
+      "name": "Adinkra Symbol Tee",
+      "price": 45,
+      "sizes": ["S", "M", "L", "XL", "XXL"],
+      "colors": ["#000000", "#FFFFFF", "#B91C1C"],
+      "images": [
+        "https://placehold.co/600x600.png"
+      ],
+      "stock": 50,
+      "rating": 4.8
+    },
+    "2": {
+      "id": "2",
+      "name": "Heritage Hoodie",
+      "price": 85,
+      "sizes": ["S", "M", "L", "XL"],
+      "colors": ["#171717", "#F5F5DC", "#8B0000"],
+      "images": [
+        "https://placehold.co/600x600.png"
+      ],
+      "stock": 30,
+      "rating": 4.9
+    },
+    "3": {
+      "id": "3",
+      "name": "Accra City Joggers",
+      "price": 65,
+      "sizes": ["S", "M", "L"],
+      "colors": ["#262626", "#E5E5E5"],
+      "images": [
+        "https://placehold.co/600x600.png"
+      ],
+      "stock": 40,
+      "rating": 4.7
+    },
+    "4": {
+      "id": "4",
+      "name": "Black Star Cap",
+      "price": 35,
+      "sizes": ["One Size"],
+      "colors": ["#000000", "#166534"],
+      "images": [
+        "https://placehold.co/600x600.png"
+      ],
+      "stock": 100,
+      "rating": 4.6
+    },
+    "5": {
+      "id": "5",
+      "name": "Kente Pattern Tee",
+      "price": 50,
+      "sizes": ["M", "L", "XL"],
+      "colors": ["#000000", "#F5F5DC"],
+      "images": [
+        "https://placehold.co/600x600.png"
+      ],
+      "stock": 25,
+      "rating": 4.9
+    },
+    "6": {
+      "id": "6",
+      "name": "Greatness Long Sleeve",
+      "price": 55,
+      "sizes": ["S", "M", "L", "XL"],
+      "colors": ["#FFFFFF", "#171717"],
+      "images": [
+        "https://placehold.co/600x600.png"
+      ],
+      "stock": 60,
+      "rating": 4.5
+    },
+    "7": {
+      "id": "7",
+      "name": "Republic Day Shorts",
+      "price": 48,
+      "sizes": ["S", "M", "L"],
+      "colors": ["#B91C1C", "#166534", "#000000"],
+      "images": [
+        "https://placehold.co/600x600.png"
+      ],
+      "stock": 33,
+      "rating": 4.7
+    },
+    "8": {
+      "id": "8",
+      "name": "Signature G4L Tee",
+      "price": 40,
+      "sizes": ["S", "M", "L", "XL", "XXL"],
+      "colors": ["#000000", "#FFFFFF", "#F5F5DC"],
+      "images": [
+        "https://placehold.co/600x600.png"
+      ],
+      "stock": 150,
+      "rating": 5
+    },
+    "9": {
+      "id": "9",
+      "name": "Legacy Bomber Jacket",
+      "price": 150,
+      "sizes": ["S", "M", "L", "XL"],
+      "colors": ["#000000", "#166534"],
+      "images": ["https://placehold.co/600x600.png"],
+      "stock": 20,
+      "rating": 4.8
+    },
+    "10": {
+      "id": "10",
+      "name": "Unity Graphic Tee",
+      "price": 45,
+      "sizes": ["S", "M", "L", "XL", "XXL"],
+      "colors": ["#FFFFFF", "#F5F5DC", "#262626"],
+      "images": ["https://placehold.co/600x600.png"],
+      "stock": 80,
+      "rating": 4.7
+    },
+    "11": {
+      "id": "11",
+      "name": "Independence Track Pants",
+      "price": 70,
+      "sizes": ["S", "M", "L"],
+      "colors": ["#000000", "#B91C1C"],
+      "images": ["https://placehold.co/600x600.png"],
+      "stock": 35,
+      "rating": 4.6
+    },
+    "12": {
+      "id": "12",
+      "name": "G4L Beanie",
+      "price": 30,
+      "sizes": ["One Size"],
+      "colors": ["#000000", "#171717", "#8B0000"],
+      "images": ["https://placehold.co/600x600.png"],
+      "stock": 90,
+      "rating": 4.9
+    },
+    "13": {
+      "id": "13",
+      "name": "Sankofa Denim Jacket",
+      "price": 180,
+      "sizes": ["M", "L", "XL"],
+      "colors": ["#262626", "#1E40AF"],
+      "images": ["https://placehold.co/600x600.png"],
+      "stock": 15,
+      "rating": 5
+    },
+    "14": {
+      "id": "14",
+      "name": "Accra Night Windbreaker",
+      "price": 95,
+      "sizes": ["S", "M", "L", "XL"],
+      "colors": ["#000000", "#FFFFFF"],
+      "images": ["https://placehold.co/600x600.png"],
+      "stock": 45,
+      "rating": 4.7
+    },
+    "15": {
+      "id": "15",
+      "name": "Republic Cargo Shorts",
+      "price": 60,
+      "sizes": ["S", "M", "L", "XL"],
+      "colors": ["#166534", "#F5F5DC"],
+      "images": ["https://placehold.co/600x600.png"],
+      "stock": 55,
+      "rating": 4.8
+    },
+    "16": {
+      "id": "16",
+      "name": "Gold Coast Crewneck",
+      "price": 80,
+      "sizes": ["S", "M", "L", "XL", "XXL"],
+      "colors": ["#F5F5DC", "#000000"],
+      "images": ["https://placehold.co/600x600.png"],
+      "stock": 40,
+      "rating": 4.9
+    },
+    "17": {
+      "id": "17",
+      "name": "Adinkra Print Socks",
+      "price": 20,
+      "sizes": ["One Size"],
+      "colors": ["#FFFFFF", "#000000"],
+      "images": ["https://placehold.co/600x600.png"],
+      "stock": 200,
+      "rating": 4.5
+    },
+    "18": {
+      "id": "18",
+      "name": "Nsawam Road Trucker Hat",
+      "price": 38,
+      "sizes": ["One Size"],
+      "colors": ["#000000", "#B91C1C", "#FFFFFF"],
+      "images": ["https://placehold.co/600x600.png"],
+      "stock": 75,
+      "rating": 4.6
+    },
+    "19": {
+      "id": "19",
+      "name": "Freedom Jersey",
+      "price": 75,
+      "sizes": ["S", "M", "L", "XL"],
+      "colors": ["#166534", "#FFFFFF"],
+      "images": ["https://placehold.co/600x600.png"],
+      "stock": 30,
+      "rating": 4.8
+    },
+    "20": {
+      "id": "20",
+      "name": "Highlife Graphic Hoodie",
+      "price": 90,
+      "sizes": ["M", "L", "XL"],
+      "colors": ["#B91C1C", "#000000"],
+      "images": ["https://placehold.co/600x600.png"],
+      "stock": 28,
+      "rating": 4.9
+    },
+    "21": {
+      "id": "21",
+      "name": "Kente Accent Sweatpants",
+      "price": 68,
+      "sizes": ["S", "M", "L"],
+      "colors": ["#262626", "#F5F5DC"],
+      "images": ["https://placehold.co/600x600.png"],
+      "stock": 42,
+      "rating": 4.7
+    },
+    "22": {
+      "id": "22",
+      "name": "Gye Nyame Slides",
+      "price": 42,
+      "sizes": ["40", "41", "42", "43", "44"],
+      "colors": ["#000000"],
+      "images": ["https://placehold.co/600x600.png"],
+      "stock": 60,
+      "rating": 4.6
+    }
+  }
+}

@@ -7,13 +7,11 @@ import { useLanding } from '@/hooks/use-landing';
 
 export function LandingScreen() {
   const { isLandingActive, hideLanding } = useLanding();
-  const [isMounted, setIsMounted] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
-    // When the component mounts, check session storage. If we've landed before, hide the screen.
-    if (sessionStorage.getItem('g4l-landed')) {
+    // Check session storage immediately on mount. If we've landed before, hide the screen.
+    if (typeof window !== 'undefined' && sessionStorage.getItem('g4l-landed')) {
       hideLanding();
     }
   }, [hideLanding]);
@@ -40,7 +38,7 @@ export function LandingScreen() {
     }
   };
   
-  if (!isMounted || !isLandingActive) {
+  if (!isLandingActive) {
     return null;
   }
 
@@ -49,17 +47,17 @@ export function LandingScreen() {
       className="group/landing"
       onClick={handleEnterSite}
     >
-      <div 
+      <div
         onTransitionEnd={onTransitionEnd}
-        className={cn("fixed inset-y-0 left-0 z-[201] w-1/2 bg-black transition-transform duration-1000 ease-in-out", isExiting ? "-translate-x-full" : "translate-x-0")}
+        className={cn("fixed inset-y-0 left-0 z-[9999] w-1/2 bg-black transition-transform duration-1000 ease-in-out", isExiting ? "-translate-x-full" : "translate-x-0")}
       />
-      <div 
-        className={cn("fixed inset-y-0 right-0 z-[201] w-1/2 bg-black transition-transform duration-1000 ease-in-out", isExiting ? "translate-x-full" : "translate-x-0")}
+      <div
+        className={cn("fixed inset-y-0 right-0 z-[9999] w-1/2 bg-black transition-transform duration-1000 ease-in-out", isExiting ? "translate-x-full" : "translate-x-0")}
       />
 
-      <div 
+      <div
         className={cn(
-          "fixed inset-0 z-[202] flex cursor-pointer items-center justify-center text-center text-white transition-opacity duration-500",
+          "fixed inset-0 z-[10000] flex cursor-pointer items-center justify-center text-center text-white transition-opacity duration-500",
           isExiting ? "opacity-0 pointer-events-none" : "opacity-100"
         )}
       >

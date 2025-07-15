@@ -30,8 +30,31 @@ export async function saveProduct(
     // Find the next available ID if it's a new product
     if (!targetProductId) {
       const snapshot = await get(productsRef);
-      const products: (Product | null)[] = snapshot.val() || [];
-      const highestId = products.reduce((max, p) => (p && parseInt(p.id) > max ? parseInt(p.id) : max), 0);
+      const products = snapshot.val() || {};
+
+      let highestId = 0;
+
+      // Handle both array and object formats
+      if (Array.isArray(products)) {
+        highestId = products.reduce((max, p) => (p && parseInt(p.id) > max ? parseInt(p.id) : max), 0);
+      } else if (typeof products === 'object') {
+        const existingIds = [];
+        for (const [key, product] of Object.entries(products)) {
+          if (product && (product as any).id) {
+            const numericId = parseInt((product as any).id);
+            if (!isNaN(numericId)) {
+              existingIds.push(numericId);
+            }
+          }
+          // Also check the key itself
+          const keyId = parseInt(key);
+          if (!isNaN(keyId)) {
+            existingIds.push(keyId);
+          }
+        }
+        highestId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
+      }
+
       targetProductId = (highestId + 1).toString();
     }
     

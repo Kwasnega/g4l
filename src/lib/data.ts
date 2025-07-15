@@ -15,9 +15,34 @@ export async function getProducts(limit?: number): Promise<{ products: Product[]
     const snapshot = await get(productsRef);
 
     if (snapshot.exists()) {
-      const productsData: (Product | null)[] = snapshot.val();
-      const validProducts = productsData.filter((p): p is Product => p !== null && p.id !== undefined);
+      const productsData = snapshot.val();
+      console.log("Client Products: Raw data from Firebase:", productsData);
+      console.log("Client Products: Data type:", typeof productsData);
+      console.log("Client Products: Is array:", Array.isArray(productsData));
+
+      // Handle both array and object formats
+      let productsArray: (Product | null)[];
+      if (Array.isArray(productsData)) {
+        productsArray = productsData;
+      } else if (typeof productsData === 'object' && productsData !== null) {
+        // Convert object to array, filtering out null/undefined values
+        productsArray = Object.values(productsData);
+      } else {
+        console.log("Unexpected products data format:", typeof productsData);
+        return { products: [] };
+      }
+
+      const validProducts = productsArray.filter((p): p is Product =>
+        p !== null &&
+        p !== undefined &&
+        p.id !== undefined &&
+        p.id !== 'storeSettings' && // Filter out store settings
+        typeof p.price === 'number' && // Ensure it's a valid product
+        !('isStoreOpen' in p) // Filter out store settings by property
+      );
       const sortedProducts = validProducts.sort((a, b) => (a.name > b.name ? 1 : -1));
+      console.log("Client Products: Valid products found:", validProducts.length);
+      console.log("Client Products: Final products:", limit ? sortedProducts.slice(0, limit) : sortedProducts);
       return {
         products: limit ? sortedProducts.slice(0, limit) : sortedProducts,
       };
@@ -37,13 +62,34 @@ export async function getProductById(id: string): Promise<Product | null> {
     console.error("Firebase database is not configured. Cannot fetch product.");
     return null;
   }
-  
+
   try {
-    const productRef = ref(db, `products/products/${id}`);
-    const snapshot = await get(productRef);
-    
+    // Since products are stored in an array, we need to fetch all products and find by ID
+    const productsRef = ref(db, 'products/products');
+    const snapshot = await get(productsRef);
+
     if (snapshot.exists()) {
-      return snapshot.val() as Product;
+      const productsData = snapshot.val();
+
+      // Handle both array and object formats
+      let productsArray: (Product | null)[];
+      if (Array.isArray(productsData)) {
+        productsArray = productsData;
+      } else if (typeof productsData === 'object' && productsData !== null) {
+        productsArray = Object.values(productsData);
+      } else {
+        return null;
+      }
+
+      const product = productsArray.find((p): p is Product =>
+        p !== null &&
+        p !== undefined &&
+        p.id === id &&
+        p.id !== 'storeSettings' && // Filter out store settings
+        typeof p.price === 'number' && // Ensure it's a valid product
+        !('isStoreOpen' in p) // Filter out store settings by property
+      );
+      return product || null;
     } else {
       return null;
     }

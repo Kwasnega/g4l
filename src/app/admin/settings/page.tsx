@@ -7,20 +7,19 @@ import { ref, get, set, onValue, off } from 'firebase/database'; // Import onVal
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Settings, ArrowLeft, Mail, Store, Instagram, Facebook, Twitter } from 'lucide-react';
+import { Loader2, Settings, Store, ShoppingBag, Users, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { Switch } from '@/components/ui/switch'; // For the store status toggle
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { AdminHeader } from '@/components/admin-header';
 
 // Define interface for settings data
 interface AppSettings {
-  contactEmail: string;
   isStoreOpen: boolean;
-  instagramLink?: string;
-  facebookLink?: string;
-  twitterLink?: string;
+  lastUpdated?: string;
+  updatedBy?: string;
 }
 
 export default function AdminSettingsPage() {
@@ -31,11 +30,9 @@ export default function AdminSettingsPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   const [settings, setSettings] = useState<AppSettings>({
-    contactEmail: '',
     isStoreOpen: true,
-    instagramLink: '',
-    facebookLink: '',
-    twitterLink: '',
+    lastUpdated: '',
+    updatedBy: '',
   });
   const [isSaving, setIsSaving] = useState(false);
   const [fetchingSettings, setFetchingSettings] = useState(true);
@@ -100,38 +97,39 @@ export default function AdminSettingsPage() {
 
     if (isAdmin && isFirebaseConfigured && db) {
       setFetchingSettings(true);
-      const settingsRef = ref(db, 'settings/general');
+      // Use a separate path that won't interfere with products
+      const settingsRef = ref(db, 'admin/storeSettings');
+      console.log("Debug - Attempting to read from:", 'admin/storeSettings');
+      console.log("Debug - Current user for settings read:", user?.uid);
+      console.log("Debug - Is admin:", isAdmin);
 
       unsubscribeSettings = onValue(settingsRef, (snapshot) => {
         const fetchedSettings = snapshot.val();
         if (snapshot.exists() && fetchedSettings) {
           setSettings({
-            contactEmail: fetchedSettings.contactEmail || '',
-            isStoreOpen: typeof fetchedSettings.isStoreOpen === 'boolean' ? fetchedSettings.isStoreOpen : true, // Default to true
-            instagramLink: fetchedSettings.instagramLink || '',
-            facebookLink: fetchedSettings.facebookLink || '',
-            twitterLink: fetchedSettings.twitterLink || '',
+            isStoreOpen: typeof fetchedSettings.isStoreOpen === 'boolean' ? fetchedSettings.isStoreOpen : true,
+            lastUpdated: fetchedSettings.lastUpdated || '',
+            updatedBy: fetchedSettings.updatedBy || '',
           });
-          console.log("AdminSettingsPage: Settings loaded:", fetchedSettings);
+          console.log("AdminSettingsPage: Store settings loaded:", fetchedSettings);
         } else {
           // Initialize default settings if node doesn't exist
-          console.log("AdminSettingsPage: No settings found, initializing defaults.");
+          console.log("AdminSettingsPage: No store settings found, initializing defaults.");
           setSettings({
-            contactEmail: 'support@g4l.com',
             isStoreOpen: true,
-            instagramLink: 'https://instagram.com/greatness4l',
-            facebookLink: 'https://facebook.com/greatness4l',
-            twitterLink: 'https://twitter.com/greatness4l',
+            lastUpdated: '',
+            updatedBy: '',
           });
-          // Optionally, save defaults to DB immediately
-          // set(settingsRef, settings);
         }
         setFetchingSettings(false);
       }, (error) => {
         console.error("AdminSettingsPage: Error fetching settings:", error);
+        console.error("Debug - Error details:", error.code, error.message);
+        console.error("Debug - User UID during error:", user?.uid);
+        console.error("Debug - Is admin during error:", isAdmin);
         toast({
-          title: "Error",
-          description: "Failed to load settings. Please try again.",
+          title: "Settings Permission Error",
+          description: `${error.message}. Please check Firebase rules and admin access.`,
           variant: "destructive",
         });
         setFetchingSettings(false);
@@ -148,26 +146,43 @@ export default function AdminSettingsPage() {
     }
   }, [isAdmin, isFirebaseConfigured, db, checkingAuth, authLoading, toast]);
 
-  const handleSaveSettings = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleStoreToggle = async (checked: boolean) => {
     setIsSaving(true);
+    console.log("Debug - User:", user);
+    console.log("Debug - User UID:", user?.uid);
+    console.log("Debug - Is Authenticated:", isAuthenticated);
+    console.log("Debug - Database available:", !!db);
+
     try {
-      if (!db) {
-        throw new Error("Firebase database not initialized.");
+      if (!db || !user?.uid) {
+        console.error("Debug - Missing requirements:", { db: !!db, userUid: user?.uid });
+        throw new Error("Firebase database or user not available.");
       }
-      const settingsRef = ref(db, 'settings/general');
-      await set(settingsRef, settings); // Overwrites existing settings
+
+      const updatedSettings = {
+        ...settings,
+        isStoreOpen: checked,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: user.uid,
+      };
+
+      // Use a separate path that won't interfere with products
+      const settingsRef = ref(db, 'admin/storeSettings');
+      await set(settingsRef, updatedSettings);
+
+      setSettings(updatedSettings);
 
       toast({
-        title: "Settings Saved",
-        description: "Your system settings have been updated.",
-        variant: "success",
+        title: checked ? "Store Opened" : "Store Closed",
+        description: checked
+          ? "Your G4L store is now open for customers!"
+          : "Your G4L store is now closed. Customers cannot place orders.",
       });
     } catch (error: any) {
-      console.error("Error saving settings:", error);
+      console.error("Error updating store status:", error);
       toast({
-        title: "Save Failed",
-        description: error.message || "Could not save settings. Please try again.",
+        title: "Update Failed",
+        description: error.message || "Could not update store status. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -185,117 +200,149 @@ export default function AdminSettingsPage() {
     );
   }
 
-  // If not an admin, return null (redirection handled by useEffect)
+  // Show debug info if not admin
   if (!isAdmin) {
-    return null;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-950 to-gray-800 text-gray-100 p-8">
+        <div className="max-w-2xl mx-auto">
+          <h1 className="text-3xl font-bold text-red-400 mb-6">Admin Access Required</h1>
+          <div className="bg-gray-900 p-6 rounded-lg border border-red-700/30">
+            <h2 className="text-xl text-white mb-4">Debug Information:</h2>
+            <div className="space-y-2 text-sm">
+              <p><span className="text-blue-300">User:</span> {user?.email || 'Not logged in'}</p>
+              <p><span className="text-blue-300">User UID:</span> {user?.uid || 'No UID'}</p>
+              <p><span className="text-blue-300">Is Authenticated:</span> {isAuthenticated ? 'Yes' : 'No'}</p>
+              <p><span className="text-blue-300">Is Admin:</span> {isAdmin ? 'Yes' : 'No'}</p>
+              <p><span className="text-blue-300">Firebase Configured:</span> {isFirebaseConfigured ? 'Yes' : 'No'}</p>
+            </div>
+            <div className="mt-6">
+              <Button asChild className="bg-blue-600 hover:bg-blue-700">
+                <Link href="/admin/login">Go to Admin Login</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 to-gray-800 text-gray-100 p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8 pb-4 border-b border-blue-700/30">
-          <h1 className="text-4xl font-bold tracking-tight text-blue-400 flex items-center">
-            <Settings className="h-10 w-10 mr-3 text-cyan-500 animate-pulse" />
-            System Settings
-          </h1>
-          <Button asChild variant="ghost" className="text-gray-400 hover:text-blue-300 hover:bg-gray-800 transition-colors duration-200">
-            <Link href="/admin">
-              <ArrowLeft className="h-5 w-5 mr-2" /> Back to Dashboard
-            </Link>
-          </Button>
-        </div>
+        <AdminHeader
+          title="Store Control"
+          subtitle="Manage your G4L store availability"
+          icon={<Store className="h-6 w-6 sm:h-8 sm:w-8 text-cyan-500" />}
+        />
 
-        <Card className="bg-gray-900 border border-blue-700/30 shadow-lg shadow-blue-500/20 rounded-xl">
-          <CardHeader className="border-b border-blue-700/20 pb-4">
-            <CardTitle className="text-xl text-blue-400">General Store Settings</CardTitle>
-            <CardDescription className="text-gray-400">Configure global settings for your G4L store.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-6">
-            <form onSubmit={handleSaveSettings} className="grid gap-6">
-              <div className="grid gap-2">
-                <Label htmlFor="contactEmail" className="text-blue-300 flex items-center">
-                  <Mail className="h-4 w-4 mr-2" /> Contact Email
-                </Label>
-                <Input
-                  id="contactEmail"
-                  type="email"
-                  value={settings.contactEmail}
-                  onChange={(e) => setSettings(prev => ({ ...prev, contactEmail: e.target.value }))}
-                  placeholder="e.g., support@yourstore.com"
-                  required
-                  className="bg-gray-800 border border-blue-600/50 text-white placeholder:text-gray-500 focus:ring-2 focus:ring-blue-500"
-                />
+        {/* Store Status Card */}
+        <Card className="bg-gray-900 border border-blue-700/30 shadow-lg shadow-blue-500/20 rounded-xl mb-6">
+          <CardContent className="p-6 sm:p-8">
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+              {/* Status Display */}
+              <div className="flex items-center gap-4">
+                <div className={`p-4 rounded-full ${settings.isStoreOpen ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                  {settings.isStoreOpen ? (
+                    <CheckCircle className="h-8 w-8 text-green-400" />
+                  ) : (
+                    <XCircle className="h-8 w-8 text-red-400" />
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white mb-1">
+                    Store is {settings.isStoreOpen ? 'Open' : 'Closed'}
+                  </h2>
+                  <p className="text-gray-400">
+                    {settings.isStoreOpen
+                      ? 'Customers can browse and place orders'
+                      : 'Store is temporarily unavailable to customers'
+                    }
+                  </p>
+                  {settings.lastUpdated && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Last updated: {new Date(settings.lastUpdated).toLocaleString()}
+                    </p>
+                  )}
+                </div>
               </div>
 
-              <div className="flex items-center justify-between space-x-4 p-4 bg-gray-800 rounded-lg border border-blue-700/20">
-                <div className="grid gap-1">
-                  <Label htmlFor="isStoreOpen" className="text-blue-300 flex items-center">
-                    <Store className="h-4 w-4 mr-2" /> Store Status
-                  </Label>
-                  <CardDescription className="text-gray-400">Toggle to open or close your online store.</CardDescription>
-                </div>
+              {/* Toggle Switch */}
+              <div className="flex flex-col items-center gap-3">
+                <Badge
+                  variant={settings.isStoreOpen ? "default" : "destructive"}
+                  className={`px-4 py-2 text-sm font-medium ${
+                    settings.isStoreOpen
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-red-600 hover:bg-red-700'
+                  }`}
+                >
+                  {settings.isStoreOpen ? 'OPEN' : 'CLOSED'}
+                </Badge>
                 <Switch
-                  id="isStoreOpen"
                   checked={settings.isStoreOpen}
-                  onCheckedChange={(checked) => setSettings(prev => ({ ...prev, isStoreOpen: checked }))}
-                  className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600"
+                  onCheckedChange={handleStoreToggle}
+                  disabled={isSaving}
+                  className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600 scale-125"
                 />
-              </div>
-
-              <div className="grid gap-2">
-                <Label className="text-blue-300">Social Media Links</Label>
-                <div className="grid gap-4">
-                  <div className="flex items-center space-x-2">
-                    <Instagram className="h-5 w-5 text-purple-400" />
-                    <Input
-                      type="url"
-                      value={settings.instagramLink}
-                      onChange={(e) => setSettings(prev => ({ ...prev, instagramLink: e.target.value }))}
-                      placeholder="Instagram Profile URL"
-                      className="flex-1 bg-gray-800 border border-blue-600/50 text-white placeholder:text-gray-500 focus:ring-2 focus:ring-blue-500"
-                    />
+                {isSaving && (
+                  <div className="flex items-center gap-2 text-blue-400">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-xs">Updating...</span>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Facebook className="h-5 w-5 text-blue-400" />
-                    <Input
-                      type="url"
-                      value={settings.facebookLink}
-                      onChange={(e) => setSettings(prev => ({ ...prev, facebookLink: e.target.value }))}
-                      placeholder="Facebook Page URL"
-                      className="flex-1 bg-gray-800 border border-blue-600/50 text-white placeholder:text-gray-500 focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Twitter className="h-5 w-5 text-sky-400" />
-                    <Input
-                      type="url"
-                      value={settings.twitterLink}
-                      onChange={(e) => setSettings(prev => ({ ...prev, twitterLink: e.target.value }))}
-                      placeholder="Twitter Profile URL"
-                      className="flex-1 bg-gray-800 border border-blue-600/50 text-white placeholder:text-gray-500 focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full py-3 text-lg font-semibold bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out
-                           flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Saving Settings...
-                  </>
-                ) : (
-                  "Save Settings"
                 )}
-              </Button>
-            </form>
+              </div>
+            </div>
           </CardContent>
         </Card>
+
+        {/* Store Impact Information */}
+        <div className="grid md:grid-cols-2 gap-6">
+          <Card className="bg-gray-900 border border-green-700/30 shadow-lg shadow-green-500/10 rounded-xl">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg text-green-400 flex items-center">
+                <CheckCircle className="h-5 w-5 mr-2" />
+                When Store is Open
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-3 text-gray-300">
+                <ShoppingBag className="h-4 w-4 text-green-400" />
+                <span className="text-sm">Customers can browse all products</span>
+              </div>
+              <div className="flex items-center gap-3 text-gray-300">
+                <Users className="h-4 w-4 text-green-400" />
+                <span className="text-sm">Orders can be placed and processed</span>
+              </div>
+              <div className="flex items-center gap-3 text-gray-300">
+                <CheckCircle className="h-4 w-4 text-green-400" />
+                <span className="text-sm">Full shopping experience available</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gray-900 border border-red-700/30 shadow-lg shadow-red-500/10 rounded-xl">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg text-red-400 flex items-center">
+                <XCircle className="h-5 w-5 mr-2" />
+                When Store is Closed
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-3 text-gray-300">
+                <AlertTriangle className="h-4 w-4 text-red-400" />
+                <span className="text-sm">Customers see "Store Temporarily Closed"</span>
+              </div>
+              <div className="flex items-center gap-3 text-gray-300">
+                <XCircle className="h-4 w-4 text-red-400" />
+                <span className="text-sm">No orders can be placed</span>
+              </div>
+              <div className="flex items-center gap-3 text-gray-300">
+                <Users className="h-4 w-4 text-red-400" />
+                <span className="text-sm">Products remain visible but not purchasable</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

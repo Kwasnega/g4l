@@ -14,7 +14,10 @@ import { LandingScreen } from '@/components/landing-screen';
 import { LandingProvider } from '@/hooks/use-landing';
 
 export const metadata: Metadata = {
-  title: 'G4L Streetwear | Your Brand Slogan Here',
+  title: {
+    default: 'G4L',
+    template: '%s | G4L'
+  },
   description: 'Ghana-made luxury streetwear by GREATNESS4L.',
 };
 
@@ -26,16 +29,18 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Explicit Favicon Link - ADD THIS LINE */}
-        <link rel="icon" href="/favicon.ico" sizes="any" /> 
-        
+        {/* Mobile Viewport */}
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+
+        {/* Explicit Favicon Link */}
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body className={cn("font-body antialiased", process.env.NODE_ENV === "development" ? "debug-screens" : undefined)}>
         <LandingProvider>
-          <LandingScreen />
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -57,6 +62,8 @@ export default function RootLayout({
               </WishlistProvider>
             </AuthProvider>
           </ThemeProvider>
+          {/* Landing screen rendered last to ensure it appears on top */}
+          <LandingScreen />
         </LandingProvider>
       </body>
     </html>

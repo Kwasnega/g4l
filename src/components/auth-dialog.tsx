@@ -30,7 +30,8 @@ import {
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
-import { auth, isFirebaseConfigured } from '@/lib/firebase';
+import { auth, isFirebaseConfigured, db } from '@/lib/firebase';
+import { ref, set } from 'firebase/database';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { cn } from '@/lib/utils';
 
@@ -212,14 +213,63 @@ export function AuthDialog({ open, onOpenChange, initialView = 'login' }: AuthDi
     setIsSubmitting(true);
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth!, values.email, values.password);
+        const userCredential = await signInWithEmailAndPassword(auth!, values.email, values.password);
+
+        // Update last login time for existing users
+        if (db && userCredential.user) {
+          try {
+            const userRef = ref(db, `users/${userCredential.user.uid}`);
+            const { get } = await import('firebase/database');
+            const snapshot = await get(userRef);
+
+            if (snapshot.exists()) {
+              // User exists, just update last login
+              const existingData = snapshot.val();
+              await set(userRef, {
+                ...existingData,
+                lastLoginAt: new Date().toISOString(),
+              });
+            } else {
+              // New user (shouldn't happen in login, but handle it)
+              await set(userRef, {
+                uid: userCredential.user.uid,
+                email: userCredential.user.email,
+                registeredAt: new Date().toISOString(),
+                lastLoginAt: new Date().toISOString(),
+              });
+            }
+          } catch (dbError) {
+            console.error('Failed to update user login data:', dbError);
+          }
+        }
+
         toast({ title: 'Login Successful', description: 'Welcome back!' });
       } else {
-        await createUserWithEmailAndPassword(
+        const userCredential = await createUserWithEmailAndPassword(
           auth!,
           values.email,
           values.password
         );
+
+        // Save user registration data to database for admin tracking
+        if (db && userCredential.user) {
+          try {
+            const userData = {
+              uid: userCredential.user.uid,
+              email: userCredential.user.email,
+              registeredAt: new Date().toISOString(),
+              lastLoginAt: new Date().toISOString(),
+            };
+
+            // Save to users collection for admin tracking
+            await set(ref(db, `users/${userCredential.user.uid}`), userData);
+            console.log('User registration data saved to database');
+          } catch (dbError) {
+            console.error('Failed to save user registration data:', dbError);
+            // Don't fail the registration if database save fails
+          }
+        }
+
         toast({
           title: 'Account Created',
           description: "You're now logged in.",

@@ -1,8 +1,18 @@
-import { getGalleryImages } from "@/lib/data"; // Only need getGalleryImages now
+import { getGalleryImages, getGallerySlideshowImages } from "@/lib/data";
 import { GalleryClient } from "@/components/gallery-client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Suspense } from "react";
 import { GalleryHero } from "@/components/gallery-hero";
+import type { Metadata } from 'next';
+
+// Force dynamic rendering to ensure fresh data on every request
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+export const metadata: Metadata = {
+  title: 'Gallery',
+  description: 'Explore the G4L streetwear gallery. See our latest designs and customer showcases.',
+};
 
 const GallerySkeleton = () => {
     return (
@@ -16,15 +26,13 @@ const GallerySkeleton = () => {
 
 export default async function GalleryPage() {
   const galleryImages = await getGalleryImages();
-  // We no longer need to fetch slideshowImages separately for GalleryHero,
-  // as it will now use the full galleryImages.
-  // const slideshowImages = await getGallerySlideshowImages(); 
+  const slideshowImages = await getGallerySlideshowImages();
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-16">
       <Suspense fallback={<Skeleton className="h-[60vh] md:h-[70vh] w-full mb-12" />}>
-        {/* Pass ALL galleryImages to GalleryHero for the slideshow */}
-        <GalleryHero slides={galleryImages} /> 
+        {/* Pass slideshow images to GalleryHero */}
+        <GalleryHero slides={slideshowImages} />
       </Suspense>
       <div className="text-center mb-12">
         <h2 className="text-3xl md:text-4xl font-headline tracking-wider">The G4L Lookbook</h2>

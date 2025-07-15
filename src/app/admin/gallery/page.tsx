@@ -9,8 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Image as ImageIcon, PlusCircle, Trash2, ArrowLeft, GalleryHorizontal, SlidersHorizontal, XCircle } from 'lucide-react';
-import Link from 'next/link';
+import { Loader2, Image as ImageIcon, PlusCircle, Trash2, GalleryHorizontal, SlidersHorizontal, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -25,6 +24,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AdminHeader } from '@/components/admin-header';
 
 // --- Cloudinary Configuration ---
 const CLOUDINARY_CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'your_cloudinary_cloud_name';
@@ -201,6 +201,19 @@ export default function AdminGalleryPage() {
         setSlideshowImages(prevImages => [...prevImages, newImage]);
       }
 
+      // Revalidate the gallery page cache to reflect new images immediately
+      try {
+        await fetch('/api/revalidate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ path: '/gallery' }),
+        });
+      } catch (revalidateError) {
+        console.warn('Failed to revalidate gallery page cache:', revalidateError);
+      }
+
       toast({
         title: "Image Uploaded",
         description: `Image successfully added to ${targetNode.replace('_', ' ')}.`,
@@ -239,10 +252,24 @@ export default function AdminGalleryPage() {
         console.log(`Cloudinary deletion for public_id: ${imageToDelete.public_id} would happen here.`);
       }
 
+      // Update local state
       if (deleteFromNode === 'gallery_images') {
         setGalleryImages(prevImages => prevImages.filter(img => img.id !== imageToDelete.id));
       } else {
         setSlideshowImages(prevImages => prevImages.filter(img => img.id !== imageToDelete.id));
+      }
+
+      // Revalidate the gallery page cache to reflect changes immediately
+      try {
+        await fetch('/api/revalidate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ path: '/gallery' }),
+        });
+      } catch (revalidateError) {
+        console.warn('Failed to revalidate gallery page cache:', revalidateError);
       }
 
       toast({
@@ -280,15 +307,11 @@ export default function AdminGalleryPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 to-gray-800 text-gray-100 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8 pb-4 border-b border-blue-700/30">
-          <h1 className="text-4xl font-bold tracking-tight text-blue-400 flex items-center">
-            <ImageIcon className="h-10 w-10 mr-3 text-purple-500 animate-pulse" />
-            Gallery Management
-          </h1>
-          <Button asChild variant="ghost" className="text-gray-400 hover:text-blue-300 hover:bg-gray-800 transition-colors duration-200">
-            <Link href="/admin">Back to Dashboard</Link>
-          </Button>
-        </div>
+        <AdminHeader
+          title="Gallery Management"
+          subtitle="Manage homepage and gallery images"
+          icon={<ImageIcon className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 animate-pulse" />}
+        />
 
         <Tabs defaultValue="gallery" className="w-full" onValueChange={setCurrentTab}>
           <TabsList className="grid w-full grid-cols-2 bg-gray-800 border border-blue-700/30 rounded-lg overflow-hidden">

@@ -25,7 +25,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { AdminHeader } from '@/components/admin-header';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,7 +36,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 const ORDER_STATUSES = ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
@@ -43,6 +43,7 @@ const ORDER_STATUSES = ['pending', 'processing', 'shipped', 'delivered', 'cancel
 export default function AdminOrdersPage() {
   const { user, loading: authLoading, isAuthenticated, isFirebaseConfigured } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   
@@ -113,6 +114,10 @@ export default function AdminOrdersPage() {
       setFetchingOrders(true);
       const fetchOrders = async () => {
         try {
+          if (!db) {
+            console.error("Database not initialized");
+            return;
+          }
           const ordersRef = ref(db, 'orders');
           const snapshot = await get(ordersRef);
           const fetchedOrders: Order[] = [];
@@ -174,6 +179,11 @@ export default function AdminOrdersPage() {
   const handleDeleteOrder = async () => {
     if (!orderToDelete || !db || !user?.uid) {
       console.error("No order selected for deletion or Firebase DB/user UID not available.");
+      toast({
+        title: "Deletion Failed",
+        description: "Unable to delete order. Please try again.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -183,12 +193,24 @@ export default function AdminOrdersPage() {
 
       await remove(orderRef);
 
+      // Update local state to remove the deleted order
       setOrders(prevOrders => prevOrders.filter(o => o.id !== orderToDelete.id));
+
+      toast({
+        title: "Order Deleted",
+        description: `Order ${orderToDelete.id.substring(0, 8)}... has been deleted successfully.`,
+      });
+
       console.log(`Order ${orderToDelete.id} deleted successfully.`);
       setOrderToDelete(null);
       setShowDeleteConfirm(false);
     } catch (error) {
       console.error(`Failed to delete order ${orderToDelete.id}:`, error);
+      toast({
+        title: "Deletion Failed",
+        description: "An error occurred while deleting the order. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -250,15 +272,11 @@ export default function AdminOrdersPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 to-gray-800 text-gray-100 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8 pb-4 border-b border-blue-700/30">
-          <h1 className="text-4xl font-bold tracking-tight text-blue-400 flex items-center">
-            <Package className="h-10 w-10 mr-3 text-blue-500 animate-pulse" />
-            Order Management
-          </h1>
-          <Button asChild variant="ghost" className="text-gray-400 hover:text-blue-300 hover:bg-gray-800 transition-colors duration-200">
-            <Link href="/admin">Back to Dashboard</Link>
-          </Button>
-        </div>
+        <AdminHeader
+          title="Order Management"
+          subtitle="View and manage customer orders"
+          icon={<Package className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 animate-pulse" />}
+        />
 
         <div className="mb-6 flex items-center space-x-4">
           <div className="relative flex-1">
@@ -369,11 +387,12 @@ export default function AdminOrdersPage() {
                         <Button
                           variant="destructive"
                           size="icon"
-                          className="bg-red-600 hover:bg-red-700 text-white transition-colors duration-200"
+                          className="bg-red-600 hover:bg-red-700 text-white transition-colors duration-200 hover:scale-105"
                           onClick={() => {
                             setOrderToDelete(order);
                             setShowDeleteConfirm(true);
                           }}
+                          title={`Delete order ${order.id.substring(0, 8)}...`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -390,10 +409,32 @@ export default function AdminOrdersPage() {
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent className="bg-gray-900 border border-red-700/30 text-white">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-red-400">Confirm Deletion</AlertDialogTitle>
+            <AlertDialogTitle className="text-red-400">Confirm Order Deletion</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-300">
-              Are you sure you want to delete order <span className="font-bold text-red-300">{orderToDelete?.id.substring(0, 8)}...?</span> This action cannot be undone.
+              Are you sure you want to delete this order? This action cannot be undone.
             </AlertDialogDescription>
+            {orderToDelete && (
+              <div className="bg-gray-800 p-3 rounded-md border border-gray-700 mt-3 space-y-2">
+                <div className="text-sm">
+                  <span className="font-semibold text-red-300">Order ID:</span> {orderToDelete.id.substring(0, 8)}...
+                </div>
+                <div className="text-sm">
+                  <span className="font-semibold text-red-300">Customer:</span> {orderToDelete.name}
+                </div>
+                <div className="text-sm">
+                  <span className="font-semibold text-red-300">Email:</span> {orderToDelete.email}
+                </div>
+                <div className="text-sm">
+                  <span className="font-semibold text-red-300">Total:</span> GH₵{orderToDelete.total.toFixed(2)}
+                </div>
+                <div className="text-sm">
+                  <span className="font-semibold text-red-300">Status:</span> {orderToDelete.status}
+                </div>
+                <div className="text-sm">
+                  <span className="font-semibold text-red-300">Date:</span> {new Date(orderToDelete.placedAt).toLocaleDateString()}
+                </div>
+              </div>
+            )}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="bg-gray-700 hover:bg-gray-600 text-white border-gray-700 hover:border-gray-600">Cancel</AlertDialogCancel>
@@ -401,7 +442,8 @@ export default function AdminOrdersPage() {
               onClick={handleDeleteOrder}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
-              Delete
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Order
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

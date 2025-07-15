@@ -349,22 +349,46 @@ export async function verifyPaystackTransaction(reference: string) {
     }
 
     try {
+        console.log('Verifying Paystack transaction:', reference);
+
         const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
             headers: {
                 Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+                'Content-Type': 'application/json',
             },
+            // Add timeout to prevent hanging requests
+            signal: AbortSignal.timeout(30000), // 30 seconds timeout
         });
 
+        if (!response.ok) {
+            throw new Error(`Paystack API returned ${response.status}: ${response.statusText}`);
+        }
+
         const data = await response.json();
+        console.log('Paystack verification response:', data);
 
         if (data.status && data.data.status === 'success') {
+            console.log('Payment verification successful');
             return { success: true, data: data.data };
         } else {
-            return { success: false, error: data.data?.gateway_response || 'Transaction verification failed.' };
+            const errorMessage = data.data?.gateway_response || data.message || 'Transaction verification failed.';
+            console.log('Payment verification failed:', errorMessage);
+            return { success: false, error: errorMessage };
         }
     } catch (error) {
         console.error('Paystack verification error:', error);
-        return { success: false, error: error instanceof Error ? error.message : 'An unknown error occurred' };
+
+        // Handle specific error types
+        if (error instanceof Error) {
+            if (error.name === 'AbortError') {
+                return { success: false, error: 'Payment verification timed out. Please try again.' };
+            }
+            if (error.message.includes('fetch')) {
+                return { success: false, error: 'Network error during payment verification. Please check your connection and try again.' };
+            }
+        }
+
+        return { success: false, error: error instanceof Error ? error.message : 'An unknown error occurred during payment verification' };
     }
 }
 

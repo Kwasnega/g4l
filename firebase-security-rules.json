@@ -1,0 +1,107 @@
+{
+  "rules": {
+    "admin": {
+      "storeSettings": {
+        ".read": "auth != null && root.child('adminUsers').child(auth.uid).val() === true",
+        ".write": "auth != null && root.child('adminUsers').child(auth.uid).val() === true",
+        ".validate": "newData.hasChildren(['isStoreOpen']) || newData.val() === null",
+        "isStoreOpen": { ".validate": "newData.isBoolean()" },
+        "lastUpdated": { ".validate": "newData.isString() || newData.val() === null" },
+        "updatedBy": { ".validate": "newData.isString() || newData.val() === null" },
+        "$other": { ".validate": false }
+      }
+    },
+    "adminUsers": {
+      ".read": "auth != null",
+      ".write": false
+    },
+    "gallery_images": {
+      ".read": true,
+      ".write": "auth != null && root.child('adminUsers').child(auth.uid).val() === true"
+    },
+    "homepage_slideshow_images": {
+      ".read": true,
+      ".write": "auth != null && root.child('adminUsers').child(auth.uid).val() === true",
+      "$imageId": {
+        ".validate": "newData.hasChildren(['id', 'url', 'public_id', 'uploadedAt'])"
+      }
+    },
+    "gallery_slideshow_images": {
+      ".read": true,
+      ".write": "auth != null && root.child('adminUsers').child(auth.uid).val() === true",
+      "$imageId": {
+        ".validate": "newData.hasChildren(['id', 'url', 'public_id', 'uploadedAt'])"
+      }
+    },
+    "orders": {
+      ".read": "auth != null && root.child('adminUsers').child(auth.uid).val() === true",
+      ".write": "auth != null && (root.child('adminUsers').child(auth.uid).val() === true || (newData.child('userId').val() === auth.uid && !data.exists()))",
+      "$userId": {
+        ".read": "auth != null && ($userId === auth.uid || root.child('adminUsers').child(auth.uid).val() === true)",
+        ".write": "auth != null && ($userId === auth.uid || root.child('adminUsers').child(auth.uid).val() === true)",
+        "$orderId": {
+          ".validate": "newData.hasChildren(['status', 'total', 'placedAt', 'userId'])",
+          "status": { ".validate": "newData.isString()" },
+          "total": { ".validate": "newData.isNumber()" },
+          "placedAt": { ".validate": "newData.isString()" },
+          "email": { ".validate": "newData.isString() || newData.val() === null" },
+          "name": { ".validate": "newData.isString() || newData.val() === null" },
+          "phone": { ".validate": "newData.isString() || newData.val() === null" },
+          "userId": { ".validate": "newData.isString() && newData.val() === auth.uid" },
+          "address": { ".validate": "newData.isString() || newData.val() === null" },
+          "deliveryMethod": { ".validate": "newData.isString() || newData.val() === null" },
+          "paymentMethod": { ".validate": "newData.isString() || newData.val() === null" },
+          "paystackReference": { ".validate": "newData.isString() || newData.val() === null" },
+          "trackingNumber": { ".validate": "newData.isString() || newData.val() === null" },
+          "items": { ".validate": "newData.exists() || newData.val() === null" },
+          "$other": { ".validate": true }
+        }
+      }
+    },
+    "products": {
+      "products": {
+        ".read": true,
+        ".write": "auth != null && root.child('adminUsers').child(auth.uid).val() === true",
+        "$index": {
+          ".validate": "newData.hasChildren(['id', 'name', 'price', 'stock', 'images', 'colors', 'rating', 'sizes']) || newData.val() === null",
+          "id": { ".validate": "newData.isString()" },
+          "name": { ".validate": "newData.isString()" },
+          "price": { ".validate": "newData.isNumber()" },
+          "stock": { ".validate": "newData.isNumber()" },
+          "images": { ".validate": "newData.exists() || newData.val() === null" },
+          "colors": { ".validate": "newData.exists() || newData.val() === null" },
+          "rating": { ".validate": "newData.isNumber()" },
+          "sizes": { ".validate": "newData.exists() || newData.val() === null" },
+          "description": { ".validate": "newData.isString() || newData.val() === null" },
+          "$other": { ".validate": false }
+        }
+      }
+    },
+    "settings": {
+      "general": {
+        ".read": "auth != null && root.child('adminUsers').child(auth.uid).val() === true",
+        ".write": "auth != null && root.child('adminUsers').child(auth.uid).val() === true",
+        ".validate": "newData.hasChildren(['isStoreOpen']) || newData.val() === null",
+        "isStoreOpen": { ".validate": "newData.isBoolean()" },
+        "lastUpdated": { ".validate": "newData.isString() || newData.val() === null" },
+        "updatedBy": { ".validate": "newData.isString() || newData.val() === null" },
+        "$other": { ".validate": false }
+      }
+    },
+    "users": {
+      ".read": "auth != null && root.child('adminUsers').child(auth.uid).val() === true",
+      "$userId": {
+        ".read": "auth != null && ($userId === auth.uid || root.child('adminUsers').child(auth.uid).val() === true)",
+        ".write": "auth != null && $userId === auth.uid",
+        ".validate": "newData.hasChildren(['uid', 'email', 'registeredAt']) || newData.val() === null",
+        "uid": { ".validate": "newData.isString() && newData.val() === auth.uid" },
+        "email": { ".validate": "newData.isString()" },
+        "registeredAt": { ".validate": "newData.isString()" },
+        "lastLoginAt": { ".validate": "newData.isString() || newData.val() === null" },
+        "$other": { ".validate": false }
+      }
+    },
+    ".read": false,
+    ".write": false
+  }
+}

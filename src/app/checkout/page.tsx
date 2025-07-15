@@ -1,6 +1,12 @@
 
 import { CheckoutForm, CheckoutFormSkeleton } from "@/components/checkout-form";
 import { Suspense } from "react";
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Checkout',
+  description: 'Complete your G4L streetwear purchase. Secure checkout process.',
+};
 
 export default function CheckoutPage() {
   return (

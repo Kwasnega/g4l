@@ -10,6 +10,7 @@ import { Button } from "./ui/button";
 import { ShoppingBag } from "lucide-react";
 import { useCart } from "@/hooks/use-cart";
 import { useToast } from "@/hooks/use-toast";
+import { useStoreStatus } from "@/hooks/use-store-status";
 import { animateFlyToCart } from "@/lib/utils";
 import { useRef } from "react";
 
@@ -20,11 +21,22 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart();
   const { toast } = useToast();
+  const { isStoreOpen } = useStoreStatus();
   const imageRef = useRef<HTMLDivElement>(null);
 
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // Check if store is open
+    if (!isStoreOpen) {
+      toast({
+        variant: "destructive",
+        title: "Store Closed",
+        description: "The G4L store is currently closed. Please check back later.",
+      });
+      return;
+    }
 
     const defaultSize = product.sizes[0];
     const defaultColor = product.colors[0];
@@ -65,18 +77,24 @@ export function ProductCard({ product }: ProductCardProps) {
             </Link>
             <WishlistButton productId={product.id} productName={`G4L ${product.name}`} />
           </div>
-          <div className="p-4">
+          <div className="p-2 sm:p-3 md:p-4">
             <Link href={`/products/${product.id}`} className="hover:underline">
-              <h3 className="font-medium truncate">G4L {product.name}</h3>
+              <h3 className="font-medium truncate text-sm sm:text-base">G4L {product.name}</h3>
             </Link>
-            <p className="font-bold text-lg">GH₵{product.price.toFixed(2)}</p>
+            <p className="font-bold text-base sm:text-lg">GH₵{product.price.toFixed(2)}</p>
           </div>
         </CardContent>
       </Card>
       
-      <div className="absolute bottom-0 left-0 right-0 p-2 opacity-0 transform translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-in-out z-10">
-        <Button className="w-full font-bold shadow-lg" onClick={handleQuickAdd}>
-            <ShoppingBag className="mr-2" /> Quick Add
+      <div className="absolute bottom-0 left-0 right-0 p-1 sm:p-2 opacity-0 transform translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-in-out z-10">
+        <Button
+          className="w-full font-bold shadow-lg text-xs sm:text-sm py-1 sm:py-2"
+          onClick={handleQuickAdd}
+          disabled={!isStoreOpen}
+          variant={!isStoreOpen ? "secondary" : "default"}
+        >
+            <ShoppingBag className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+            {!isStoreOpen ? "Store Closed" : "Quick Add"}
         </Button>
       </div>
     </div>

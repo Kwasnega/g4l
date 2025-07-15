@@ -17,9 +17,16 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge'; // Ensure Badge is imported
 
 // --- Cloudinary Configuration ---
-const CLOUDINARY_CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'your_cloudinary_cloud_name';
-// FIXED: Use the specific product upload preset
-const CLOUDINARY_PRODUCT_UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCT_UPLOAD_PRESET || 'your_unsigned_product_upload_preset';
+const CLOUDINARY_CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_PRODUCT_UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_PRODUCT_UPLOAD_PRESET;
+
+// Validate Cloudinary configuration
+if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_PRODUCT_UPLOAD_PRESET) {
+  console.error('Cloudinary configuration missing:', {
+    cloudName: CLOUDINARY_CLOUD_NAME ? 'Set' : 'Missing',
+    uploadPreset: CLOUDINARY_PRODUCT_UPLOAD_PRESET ? 'Set' : 'Missing'
+  });
+}
 
 export default function AdminAddProductPage() {
   const { user, loading: authLoading, isAuthenticated, isFirebaseConfigured } = useAuth();
@@ -98,24 +105,61 @@ export default function AdminAddProductPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please select an image file (JPG, PNG, GIF, etc.).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Please select an image smaller than 10MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setImageUploading(true);
     const formData = new FormData();
     formData.append('file', file);
-    // FIXED: Use the specific product upload preset
-    formData.append('upload_preset', CLOUDINARY_PRODUCT_UPLOAD_PRESET);
+
+    // Use the product upload preset, fallback to gallery preset if needed
+    const uploadPreset = CLOUDINARY_PRODUCT_UPLOAD_PRESET || process.env.NEXT_PUBLIC_CLOUDINARY_GALLERY_UPLOAD_PRESET;
+    if (!uploadPreset) {
+      throw new Error('No Cloudinary upload preset configured');
+    }
+    formData.append('upload_preset', uploadPreset);
 
     try {
+      console.log('Uploading to Cloudinary:', {
+        cloudName: CLOUDINARY_CLOUD_NAME,
+        uploadPreset: CLOUDINARY_PRODUCT_UPLOAD_PRESET,
+        fileName: file.name,
+        fileSize: file.size
+      });
+
       const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
         method: 'POST',
         body: formData,
       });
 
+      console.log('Cloudinary response status:', response.status);
+
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error.message || 'Cloudinary upload failed');
+        console.error('Cloudinary error response:', errorData);
+        throw new Error(errorData.error?.message || `Upload failed with status ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('Cloudinary upload success:', data.secure_url);
+
       setImages(prevImages => [...prevImages, data.secure_url]);
       toast({
         title: "Image Uploaded",
@@ -190,18 +234,51 @@ export default function AdminAddProductPage() {
     try {
       const productsRef = ref(db, 'products/products');
       const snapshot = await get(productsRef);
-      const currentProducts: (Product | null)[] = snapshot.val() || [];
+      const currentProducts = snapshot.val() || {};
 
-      const maxId = currentProducts.reduce((max, p) => p && typeof p.id === 'string' ? Math.max(max, parseInt(p.id)) : max, 0);
-      const newProductId = (maxId + 1).toString();
+      // Generate new product ID (handle both array and object formats)
+      let maxId = 0;
+      let nextKey = null;
 
-      let nextIndex = currentProducts.length;
-      for (let i = 0; i < currentProducts.length; i++) {
-        if (currentProducts[i] === null) {
-          nextIndex = i;
-          break;
+      if (Array.isArray(currentProducts)) {
+        // Array format - find max ID and next available index
+        maxId = currentProducts.reduce((max, p) => {
+          if (p && p.id) {
+            const numericId = parseInt(p.id);
+            return isNaN(numericId) ? max : Math.max(max, numericId);
+          }
+          return max;
+        }, 0);
+
+        // Find the next available index (either at the end or in a null slot)
+        nextKey = currentProducts.length;
+        for (let i = 0; i < currentProducts.length; i++) {
+          if (currentProducts[i] === null) {
+            nextKey = i;
+            break;
+          }
         }
+      } else if (typeof currentProducts === 'object') {
+        // Object format - find max ID from keys and values
+        const existingIds = [];
+        for (const [key, product] of Object.entries(currentProducts)) {
+          if (product && (product as any).id) {
+            const numericId = parseInt((product as any).id);
+            if (!isNaN(numericId)) {
+              existingIds.push(numericId);
+            }
+          }
+          // Also check the key itself
+          const keyId = parseInt(key);
+          if (!isNaN(keyId)) {
+            existingIds.push(keyId);
+          }
+        }
+        maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
+        nextKey = maxId + 1;
       }
+
+      const newProductId = (maxId + 1).toString();
 
       const newProduct: Product = {
         id: newProductId,
@@ -215,8 +292,30 @@ export default function AdminAddProductPage() {
         rating: 0,
       };
 
-      const productAtIndexRef = ref(db, `products/products/${nextIndex}`);
-      await set(productAtIndexRef, newProduct);
+      // Save the product to Firebase
+      const productAtKeyRef = ref(db, `products/products/${nextKey}`);
+      await set(productAtKeyRef, newProduct);
+
+      // Revalidate cache for product-related pages
+      try {
+        await fetch('/api/revalidate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: '/products' }),
+        });
+        await fetch('/api/revalidate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: '/' }),
+        });
+        await fetch('/api/revalidate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: '/admin/products' }),
+        });
+      } catch (revalidateError) {
+        console.warn('Failed to revalidate cache:', revalidateError);
+      }
 
       toast({
         title: "Product Added",

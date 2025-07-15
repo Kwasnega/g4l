@@ -19,6 +19,7 @@ export const GalleryImageSchema = z.object({
     id: z.string(),
     url: z.string().url(),
     uploadedAt: z.string(),
+    public_id: z.string().optional(), // Make it optional for backward compatibility
 });
 
 export type GalleryImage = z.infer<typeof GalleryImageSchema>;

@@ -24,11 +24,14 @@ const ProductGridSkeleton = () => {
 
 export async function ProductGrid({ limit }: ProductGridProps) {
   const { products } = await getProducts(limit);
-  
+
   return (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
         {products.length === 0 ? (
-            <p className="text-center text-muted-foreground col-span-full">No products found.</p>
+            <div className="col-span-full text-center py-12">
+              <p className="text-lg text-muted-foreground mb-2">No products available yet</p>
+              <p className="text-sm text-muted-foreground">Check back soon for our latest streetwear collection!</p>
+            </div>
         ) : (
             products.map((product) => (
               <ProductCard key={product.id} product={product} />

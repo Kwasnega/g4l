@@ -4,14 +4,16 @@
 import { useEffect, useState } from "react";
 import type { Product } from "@/types";
 import { useCart } from "@/hooks/use-cart";
+import { useStoreStatus } from "@/hooks/use-store-status";
 import { getProductById } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingBag, Trash2 } from "lucide-react";
+import { ShoppingBag, Trash2, Info } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type CartDisplayItem = {
   product: Product;
@@ -22,8 +24,14 @@ type CartDisplayItem = {
 
 export default function CartPage() {
   const { items, isInitialized, updateItemQuantity, removeItem } = useCart();
+  const { isStoreOpen } = useStoreStatus();
   const [displayItems, setDisplayItems] = useState<CartDisplayItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Set page title
+  useEffect(() => {
+    document.title = 'Cart | G4L';
+  }, []);
 
   useEffect(() => {
     if (isInitialized) {
@@ -76,40 +84,45 @@ export default function CartPage() {
             </div>
         </div>
       ) : (
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="md:col-span-2 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          <div className="lg:col-span-2 space-y-3 sm:space-y-4">
             {displayItems.map(item => (
-              <div key={`${item.product.id}-${item.size}-${item.color}`} className="flex items-start gap-4 p-4 border rounded-lg">
-                <Image src={item.product.images[0]} alt={item.product.name} width={100} height={133} className="rounded-md object-cover" />
-                <div className="flex-1">
-                  <Link href={`/products/${item.product.id}`} className="font-semibold hover:underline">G4L {item.product.name}</Link>
-                  <p className="text-sm text-muted-foreground">Size: {item.size}</p>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div key={`${item.product.id}-${item.size}-${item.color}`} className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4 p-3 sm:p-4 border rounded-lg">
+                <div className="w-full sm:w-auto flex-shrink-0">
+                  <Image src={item.product.images[0]} alt={item.product.name} width={80} height={107} className="w-20 h-auto sm:w-24 sm:h-auto rounded-md object-cover mx-auto sm:mx-0" />
+                </div>
+                <div className="flex-1 w-full sm:w-auto">
+                  <Link href={`/products/${item.product.id}`} className="font-semibold hover:underline text-sm sm:text-base">G4L {item.product.name}</Link>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Size: {item.size}</p>
+                  <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
                     <span>Color:</span>
-                    <div className="h-4 w-4 rounded-full border" style={{ backgroundColor: item.color }} />
+                    <div className="h-3 w-3 sm:h-4 sm:w-4 rounded-full border" style={{ backgroundColor: item.color }} />
                   </div>
-                  <p className="font-bold mt-1">GH₵{item.product.price.toFixed(2)}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Input 
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) => updateItemQuantity(item.product.id, item.size, item.color, parseInt(e.target.value, 10))}
-                      className="w-20 h-9"
-                      aria-label="Quantity"
-                    />
-                    <Button variant="ghost" size="icon" onClick={() => removeItem(item.product.id, item.size, item.color)} aria-label="Remove item">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <p className="font-bold mt-1 text-sm sm:text-base">GH₵{item.product.price.toFixed(2)}</p>
+                  <div className="flex items-center justify-between sm:justify-start gap-2 mt-2">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) => updateItemQuantity(item.product.id, item.size, item.color, parseInt(e.target.value, 10))}
+                        className="w-16 sm:w-20 h-8 sm:h-9 text-sm"
+                        aria-label="Quantity"
+                      />
+                      <Button variant="ghost" size="icon" onClick={() => removeItem(item.product.id, item.size, item.color)} aria-label="Remove item" className="h-8 w-8 sm:h-9 sm:w-9">
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </Button>
+                    </div>
+                    <p className="font-bold text-sm sm:text-base sm:hidden">GH₵{(item.product.price * item.quantity).toFixed(2)}</p>
                   </div>
                 </div>
-                <p className="font-bold">GH₵{(item.product.price * item.quantity).toFixed(2)}</p>
+                <p className="font-bold text-sm sm:text-base hidden sm:block">GH₵{(item.product.price * item.quantity).toFixed(2)}</p>
               </div>
             ))}
           </div>
-          <div className="md:col-span-1">
-            <div className="p-6 border rounded-lg sticky top-24">
-              <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+          <div className="lg:col-span-1">
+            <div className="p-4 sm:p-6 border rounded-lg lg:sticky lg:top-24">
+              <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Order Summary</h2>
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
@@ -125,8 +138,29 @@ export default function CartPage() {
                 <span>Total</span>
                 <span>GH₵{subtotal.toFixed(2)}</span>
               </div>
-              <Button size="lg" className="w-full mt-6" asChild>
-                <Link href="/checkout">Proceed to Checkout</Link>
+
+              {!isStoreOpen && (
+                <Alert variant="destructive" className="mt-4">
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>Store Closed</AlertTitle>
+                  <AlertDescription>
+                    The G4L store is currently closed. Checkout is not available.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <Button
+                size="lg"
+                className="w-full mt-6"
+                asChild={isStoreOpen}
+                disabled={!isStoreOpen}
+                variant={!isStoreOpen ? "secondary" : "default"}
+              >
+                {isStoreOpen ? (
+                  <Link href="/checkout">Proceed to Checkout</Link>
+                ) : (
+                  <span>Store Closed</span>
+                )}
               </Button>
             </div>
           </div>

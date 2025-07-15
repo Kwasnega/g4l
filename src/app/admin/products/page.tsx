@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
-import { ref, get, remove } from 'firebase/database'; // Import 'remove' for deletion
+import { ref, get, remove, set } from 'firebase/database'; // Import Firebase functions
 import { db } from '@/lib/firebase';
 import type { Product } from '@/types'; // Import the Product type
 import {
@@ -20,6 +20,8 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Package, Search, PlusCircle, Edit, Trash2, ChevronUp, ChevronDown } from 'lucide-react'; // Icons
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { AdminHeader } from '@/components/admin-header';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +37,7 @@ import {
 export default function AdminProductsPage() {
   const { user, loading: authLoading, isAuthenticated, isFirebaseConfigured } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   
@@ -112,16 +115,49 @@ export default function AdminProductsPage() {
           const fetchedProducts: Product[] = [];
 
           if (snapshot.exists()) {
-            const productsData: (Product | null)[] = snapshot.val();
-            // Filter out null values and ensure 'id' exists
-            productsData.forEach((product, index) => {
-              if (product !== null && product.id !== undefined) {
-                fetchedProducts.push(product);
-              } else {
-                console.warn(`Skipping malformed or null product at index ${index}:`, product);
-              }
-            });
+            const productsData = snapshot.val();
+            console.log("Admin Products: Raw data from Firebase:", productsData);
+            console.log("Admin Products: Data type:", typeof productsData);
+            console.log("Admin Products: Is array:", Array.isArray(productsData));
+
+            // Handle both array and object formats (same as client-side)
+            if (Array.isArray(productsData)) {
+              // If it's an array, filter out null values and store settings
+              productsData.forEach((product, index) => {
+                if (product !== null &&
+                    product !== undefined &&
+                    product.id !== undefined &&
+                    product.id !== 'storeSettings' &&
+                    typeof product.price === 'number' &&
+                    !('isStoreOpen' in product)) {
+                  fetchedProducts.push(product);
+                } else {
+                  console.warn(`Skipping malformed, null, or store settings at index ${index}:`, product);
+                }
+              });
+            } else if (typeof productsData === 'object' && productsData !== null) {
+              // If it's an object, convert to array and filter
+              const productsArray = Object.values(productsData);
+              productsArray.forEach((product, index) => {
+                if (product !== null &&
+                    product !== undefined &&
+                    (product as any)?.id !== undefined &&
+                    (product as any)?.id !== 'storeSettings' &&
+                    typeof (product as any)?.price === 'number' &&
+                    !('isStoreOpen' in (product as any))) {
+                  fetchedProducts.push(product as Product);
+                } else {
+                  console.warn(`Skipping malformed, null, or store settings at index ${index}:`, product);
+                }
+              });
+            } else {
+              console.warn("Unexpected products data format:", typeof productsData);
+            }
+          } else {
+            console.log("Admin Products: No data exists in Firebase at 'products/products'");
           }
+
+          console.log("Admin Products: Final fetched products:", fetchedProducts);
           setProducts(fetchedProducts);
         } catch (error) {
           console.error("Error fetching products:", error);
@@ -143,32 +179,88 @@ export default function AdminProductsPage() {
     }
 
     try {
-      // Products are stored in an array, so we need to find their index
-      // and update the array in Firebase by setting that index to null.
-      // Firebase Realtime Database handles sparse arrays by treating nulls as empty.
+      // Find the product and delete it (handle both array and object formats)
       const productsRef = ref(db, 'products/products');
       const snapshot = await get(productsRef);
+
       if (snapshot.exists()) {
-        const productsArray: (Product | null)[] = snapshot.val();
-        const indexToDelete = productsArray.findIndex(p => p?.id === productToDelete.id);
+        const productsData = snapshot.val();
+        let productFound = false;
+        let keyToDelete = null;
 
-        if (indexToDelete !== -1) {
-          const productPath = `products/products/${indexToDelete}`;
-          const productRef = ref(db, productPath);
-          await remove(productRef); // Use remove to set the index to null
-
-          // Update local state by filtering out the product
-          setProducts(prevProducts => prevProducts.filter(p => p.id !== productToDelete.id));
-          console.log(`Product ${productToDelete.id} deleted successfully (set to null in DB).`);
-        } else {
-          console.warn(`Product ${productToDelete.id} not found in DB array.`);
+        // Handle both array and object formats
+        if (Array.isArray(productsData)) {
+          const indexToDelete = productsData.findIndex(p => p?.id === productToDelete.id);
+          if (indexToDelete !== -1) {
+            productFound = true;
+            keyToDelete = indexToDelete;
+          }
+        } else if (typeof productsData === 'object' && productsData !== null) {
+          // Find the key in the object
+          for (const [key, product] of Object.entries(productsData)) {
+            if (product && (product as any).id === productToDelete.id) {
+              productFound = true;
+              keyToDelete = key;
+              break;
+            }
+          }
         }
+
+        if (productFound && keyToDelete !== null) {
+          // Set the specific key to null to delete the product
+          const productRef = ref(db, `products/products/${keyToDelete}`);
+          await set(productRef, null);
+
+          // Update local state
+          setProducts(prevProducts => prevProducts.filter(p => p.id !== productToDelete.id));
+
+          // Revalidate cache for all product-related pages
+          try {
+            await fetch('/api/revalidate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: '/products' }),
+            });
+            await fetch('/api/revalidate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: '/' }),
+            });
+          } catch (revalidateError) {
+            console.warn('Failed to revalidate cache:', revalidateError);
+          }
+
+          toast({
+            title: "Product Deleted",
+            description: `Product "${productToDelete.name}" has been deleted successfully.`,
+            variant: "success",
+          });
+
+          console.log(`Product ${productToDelete.id} deleted successfully.`);
+        } else {
+          toast({
+            title: "Product Not Found",
+            description: "The product could not be found in the database.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "No Products Found",
+          description: "No products exist in the database.",
+          variant: "destructive",
+        });
       }
 
       setProductToDelete(null);
       setShowDeleteConfirm(false);
     } catch (error) {
       console.error(`Failed to delete product ${productToDelete.id}:`, error);
+      toast({
+        title: "Deletion Failed",
+        description: "An error occurred while deleting the product. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -228,15 +320,11 @@ export default function AdminProductsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 to-gray-800 text-gray-100 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8 pb-4 border-b border-blue-700/30">
-          <h1 className="text-4xl font-bold tracking-tight text-blue-400 flex items-center">
-            <Package className="h-10 w-10 mr-3 text-blue-500 animate-pulse" />
-            Product Catalog
-          </h1>
-          <Button asChild variant="ghost" className="text-gray-400 hover:text-blue-300 hover:bg-gray-800 transition-colors duration-200">
-            <Link href="/admin">Back to Dashboard</Link>
-          </Button>
-        </div>
+        <AdminHeader
+          title="Product Catalog"
+          subtitle="Manage your G4L products"
+          icon={<Package className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 animate-pulse" />}
+        />
 
         <div className="mb-6 flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4">
           <div className="relative flex-1 w-full">
@@ -262,9 +350,25 @@ export default function AdminProductsPage() {
             <p className="ml-4 text-lg text-gray-400">Loading products...</p>
           </div>
         ) : filteredAndSortedProducts.length === 0 ? (
-          <div className="text-center p-12 bg-gray-900 rounded-lg shadow-inner shadow-blue-500/10">
-            <p className="text-xl text-gray-400">No products found.</p>
-            {searchTerm && <p className="text-md text-gray-500 mt-2">Try adjusting your search.</p>}
+          <div className="text-center p-8 sm:p-12 bg-gray-900 rounded-lg shadow-inner shadow-blue-500/10">
+            {searchTerm ? (
+              <>
+                <p className="text-lg sm:text-xl text-gray-400">No products found matching "{searchTerm}"</p>
+                <p className="text-sm sm:text-md text-gray-500 mt-2">Try adjusting your search or clear the filter.</p>
+              </>
+            ) : (
+              <>
+                <Package className="h-12 w-12 sm:h-16 sm:w-16 text-gray-500 mx-auto mb-4" />
+                <p className="text-lg sm:text-xl text-gray-400 mb-2">No products in your store yet</p>
+                <p className="text-sm sm:text-md text-gray-500 mb-6">Start building your G4L collection by adding your first product.</p>
+                <Button asChild className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                  <Link href="/admin/products/add">
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Add Your First Product
+                  </Link>
+                </Button>
+              </>
+            )}
           </div>
         ) : (
           <div className="bg-gray-900 border border-blue-700/30 rounded-xl shadow-lg shadow-blue-500/20 overflow-x-auto">

@@ -49,7 +49,7 @@ export function ContactForm() {
   function onSubmit(data: ContactFormValues) {
     // IMPORTANT: Replace this with your own WhatsApp number in international format.
     // For example: 233241234567 (for a number in Ghana)
-    const whatsAppNumber = '233208535111';
+    const whatsAppNumber = '233504117421';
 
     const message = `Hello, my name is ${data.name}. \n\n${data.message}`;
     const encodedMessage = encodeURIComponent(message);

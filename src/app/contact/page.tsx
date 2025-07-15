@@ -1,5 +1,11 @@
 
 import { ContactForm } from '@/components/contact-form';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Contact',
+  description: 'Get in touch with G4L. Contact us for inquiries, support, or collaborations.',
+};
 
 // A simple WhatsApp icon component
 const WhatsAppIcon = () => (
@@ -22,12 +28,12 @@ const WhatsAppIcon = () => (
 
 export default function ContactPage() {
   return (
-    <div className="container mx-auto px-4 py-12 md:py-20">
+    <div className="container mx-auto px-4 py-8 sm:py-12 md:py-20">
       <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-10">
+        <div className="text-center mb-8 sm:mb-10">
             <WhatsAppIcon />
-            <h1 className="text-4xl md:text-5xl font-headline tracking-tight">Contact Us</h1>
-            <p className="mt-3 text-lg text-muted-foreground">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-headline tracking-tight">Contact Us</h1>
+            <p className="mt-3 text-base sm:text-lg text-muted-foreground">
                 Have a question or feedback? Send us a message on WhatsApp.
             </p>
         </div>

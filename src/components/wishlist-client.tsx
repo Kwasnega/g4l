@@ -40,14 +40,14 @@ export function WishlistClient({ suggestedProducts }: WishlistClientProps) {
   }, [productIds, isInitialized]);
 
   return (
-    <div className="container mx-auto px-4 py-8 md:py-16">
-      <h1 className="text-3xl md:text-4xl font-headline text-center mb-8 flex items-center justify-center gap-2">
-        <Heart className="h-8 w-8" /> My Wishlist
+    <div className="container mx-auto px-4 py-6 sm:py-8 md:py-16">
+      <h1 className="text-2xl sm:text-3xl md:text-4xl font-headline text-center mb-6 sm:mb-8 flex items-center justify-center gap-2">
+        <Heart className="h-6 w-6 sm:h-8 sm:w-8" /> My Wishlist
       </h1>
       {isInitialized && !isLoading && products.length === 0 && (
-        <div className="text-center py-16">
-          <p className="text-lg text-muted-foreground">Your wishlist is empty.</p>
-          <p className="text-muted-foreground mt-2">Add some products you love by clicking the heart icon.</p>
+        <div className="text-center py-12 sm:py-16">
+          <p className="text-base sm:text-lg text-muted-foreground">Your wishlist is empty.</p>
+          <p className="text-sm sm:text-base text-muted-foreground mt-2">Add some products you love by clicking the heart icon.</p>
             <Button asChild className="mt-6">
               <Link href="/">Discover Products</Link>
             </Button>

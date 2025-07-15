@@ -141,17 +141,17 @@ export function HeroSection() {
         </div>
       ))}
       
-      {/* Text Content */}
-      <div className="relative z-10 text-center p-4">
+      {/* Text Content - Mobile Optimized */}
+      <div className="relative z-10 text-center px-4 sm:px-6 md:px-8">
         {/* Using a key on the parent div to re-trigger animations on slide change */}
         <div key={currentIndex} className="animate-fade-in-up">
-            <h1 className="font-headline text-5xl md:text-7xl lg:text-9xl tracking-wider mb-4">
+            <h1 className="font-headline text-3xl sm:text-4xl md:text-6xl lg:text-7xl xl:text-8xl tracking-wider mb-3 sm:mb-4 leading-tight">
                 {staticHeroContent.headline}
             </h1>
-            <p className="max-w-xl mx-auto text-lg md:text-xl text-neutral-200 mb-8">
+            <p className="max-w-sm sm:max-w-md md:max-w-xl mx-auto text-sm sm:text-base md:text-lg lg:text-xl text-neutral-200 mb-6 sm:mb-8 leading-relaxed">
                 {staticHeroContent.subheadline}
             </p>
-            <Button size="lg" asChild className="font-bold text-lg">
+            <Button size="lg" asChild className="font-bold text-sm sm:text-base md:text-lg px-6 sm:px-8 py-2 sm:py-3">
                 <Link href="/products">{staticHeroContent.buttonText}</Link>
             </Button>
         </div>

@@ -11,6 +11,7 @@ import { useRecentlyViewed } from "@/hooks/use-recently-viewed";
 import { cn, animateFlyToCart } from "@/lib/utils";
 import { useWishlist } from "@/hooks/use-wishlist";
 import { useCart } from "@/hooks/use-cart";
+import { useStoreStatus } from "@/hooks/use-store-status";
 import { Heart, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "./ui/input";
@@ -27,6 +28,7 @@ export function ProductDetails({ product }: ProductDetailsProps) {
   const [quantity, setQuantity] = useState(1);
   const { addProductId } = useRecentlyViewed();
   const { toast } = useToast();
+  const { isStoreOpen } = useStoreStatus();
 
   const { toggleProductId, isInWishlist } = useWishlist();
   const { addItem: addItemToCart } = useCart();
@@ -41,13 +43,23 @@ export function ProductDetails({ product }: ProductDetailsProps) {
   }, [product.id, addProductId]);
 
   const handleAddToCart = () => {
+      // Check if store is open
+      if (!isStoreOpen) {
+        toast({
+          variant: "destructive",
+          title: "Store Closed",
+          description: "The G4L store is currently closed. Please check back later.",
+        });
+        return;
+      }
+
       if (selectedSize && selectedColor) {
           addItemToCart(product.id, selectedSize, selectedColor, quantity);
           toast({
             title: "Added to bag!",
             description: `${productName} (${selectedColor}, ${selectedSize}) has been added to your bag.`,
           });
-          
+
           const productImageEl = productImageRef.current;
           const cartIconEl = document.querySelector<HTMLElement>('[data-cart-icon]');
           if (productImageEl && cartIconEl) {
@@ -65,14 +77,14 @@ export function ProductDetails({ product }: ProductDetailsProps) {
   }
 
   return (
-    <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 md:gap-12">
-      <div className="md:col-span-1 lg:col-span-3 flex flex-col-reverse md:flex-row gap-4">
-         <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0">
+    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 sm:gap-8 lg:gap-12">
+      <div className="lg:col-span-3 flex flex-col-reverse sm:flex-row gap-3 sm:gap-4">
+         <div className="flex sm:flex-col gap-2 overflow-x-auto sm:overflow-x-visible pb-2 sm:pb-0">
           {product.images.map((img, index) => (
             <button
               key={index}
               className={cn(
-                "relative aspect-square w-20 flex-shrink-0 rounded-lg overflow-hidden transition-all",
+                "relative aspect-square w-16 sm:w-20 flex-shrink-0 rounded-lg overflow-hidden transition-all",
                 selectedImage === img ? "ring-2 ring-primary ring-offset-2" : "opacity-70 hover:opacity-100"
               )}
               onClick={() => setSelectedImage(img)}
@@ -86,34 +98,34 @@ export function ProductDetails({ product }: ProductDetailsProps) {
         </div>
       </div>
 
-      <div className="md:col-span-1 lg:col-span-2 flex flex-col">
-        <h1 className="font-headline text-4xl md:text-5xl">{productName}</h1>
-        <p className="font-bold text-3xl my-4">GH₵{product.price.toFixed(2)}</p>
+      <div className="lg:col-span-2 flex flex-col">
+        <h1 className="font-headline text-2xl sm:text-3xl lg:text-4xl xl:text-5xl leading-tight">{productName}</h1>
+        <p className="font-bold text-2xl sm:text-3xl my-3 sm:my-4">GH₵{product.price.toFixed(2)}</p>
         
         <div className="prose prose-sm dark:prose-invert text-muted-foreground">
           <p>{product.description || 'This is where a detailed product description would go. It would highlight the quality of the materials, the fit, and the story behind the design, connecting back to the G4L brand identity.'}</p>
         </div>
 
-        <div className="mt-6 space-y-6">
+        <div className="mt-4 sm:mt-6 space-y-4 sm:space-y-6">
           <div>
-            <Label className="font-bold text-lg">Color</Label>
-            <RadioGroup 
-              onValueChange={setSelectedColor} 
-              className="flex flex-wrap gap-3 mt-2"
+            <Label className="font-bold text-base sm:text-lg">Color</Label>
+            <RadioGroup
+              onValueChange={setSelectedColor}
+              className="flex flex-wrap gap-2 sm:gap-3 mt-2"
             >
               {product.colors.map((color) => (
                 <Label
                   key={color}
                   htmlFor={`color-${color}`}
                   className={cn(
-                    "relative flex items-center justify-center rounded-full w-8 h-8 cursor-pointer transition-all",
+                    "relative flex items-center justify-center rounded-full w-7 h-7 sm:w-8 sm:h-8 cursor-pointer transition-all",
                     selectedColor === color ? "ring-2 ring-primary ring-offset-2" : ""
                   )}
                   style={{ backgroundColor: color }}
                   title={color}
                 >
                   <RadioGroupItem value={color} id={`color-${color}`} className="sr-only" />
-                  {selectedColor === color && <Check className="h-4 w-4 text-primary-foreground" />}
+                  {selectedColor === color && <Check className="h-3 w-3 sm:h-4 sm:w-4 text-primary-foreground" />}
                 </Label>
               ))}
             </RadioGroup>
@@ -155,8 +167,17 @@ export function ProductDetails({ product }: ProductDetailsProps) {
         </div>
 
         <div className="flex gap-2 mt-8">
-            <Button size="lg" className="w-full text-lg font-bold" disabled={!selectedSize || !selectedColor} onClick={handleAddToCart}>
-                {!selectedSize || !selectedColor ? 'Select options' : 'Add to Bag'}
+            <Button
+              size="lg"
+              className="w-full text-lg font-bold"
+              disabled={!selectedSize || !selectedColor || !isStoreOpen}
+              onClick={handleAddToCart}
+              variant={!isStoreOpen ? "secondary" : "default"}
+            >
+                {!isStoreOpen
+                  ? 'Store Closed'
+                  : (!selectedSize || !selectedColor ? 'Select options' : 'Add to Bag')
+                }
             </Button>
             <Button size="lg" variant="outline" className="px-4" onClick={handleWishlistToggle} aria-label="Toggle Wishlist">
                 <Heart className={cn("h-6 w-6", isProductInWishlist && "fill-destructive text-destructive")} />

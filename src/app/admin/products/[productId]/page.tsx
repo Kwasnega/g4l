@@ -112,8 +112,24 @@ export default function AdminEditProductPage() {
           let foundProduct: Product | null = null;
 
           if (snapshot.exists()) {
-            const productsArray: (Product | null)[] = snapshot.val();
-            foundProduct = productsArray.find(p => p?.id === productId) || null;
+            const productsData = snapshot.val();
+            let productsArray: (Product | null)[];
+
+            // Handle both array and object formats
+            if (Array.isArray(productsData)) {
+              productsArray = productsData;
+            } else if (typeof productsData === 'object' && productsData !== null) {
+              productsArray = Object.values(productsData);
+            } else {
+              productsArray = [];
+            }
+
+            foundProduct = productsArray.find(p =>
+              p?.id === productId &&
+              p?.id !== 'storeSettings' &&
+              typeof p?.price === 'number' &&
+              !('isStoreOpen' in p)
+            ) || null;
           }
 
           if (foundProduct) {
@@ -148,24 +164,55 @@ export default function AdminEditProductPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please select an image file (JPG, PNG, GIF, etc.).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Please select an image smaller than 10MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setImageUploading(true);
     const formData = new FormData();
     formData.append('file', file);
-    // FIXED: Use the specific product upload preset
     formData.append('upload_preset', CLOUDINARY_PRODUCT_UPLOAD_PRESET);
 
     try {
+      console.log('Uploading to Cloudinary:', {
+        cloudName: CLOUDINARY_CLOUD_NAME,
+        uploadPreset: CLOUDINARY_PRODUCT_UPLOAD_PRESET,
+        fileName: file.name,
+        fileSize: file.size
+      });
+
       const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
         method: 'POST',
         body: formData,
       });
 
+      console.log('Cloudinary response status:', response.status);
+
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error.message || 'Cloudinary upload failed');
+        console.error('Cloudinary error response:', errorData);
+        throw new Error(errorData.error?.message || `Upload failed with status ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('Cloudinary upload success:', data.secure_url);
+
       setImages(prevImages => [...prevImages, data.secure_url]);
       toast({
         title: "Image Uploaded",
@@ -240,10 +287,27 @@ export default function AdminEditProductPage() {
     try {
       const productsRef = ref(db, 'products/products');
       const snapshot = await get(productsRef);
-      const currentProducts: (Product | null)[] = snapshot.val() || [];
-      const productIndex = currentProducts.findIndex(p => p?.id === product.id);
+      const currentProducts = snapshot.val() || {};
 
-      if (productIndex === -1) {
+      let productKey = null;
+
+      // Handle both array and object formats
+      if (Array.isArray(currentProducts)) {
+        const productIndex = currentProducts.findIndex(p => p?.id === product.id);
+        if (productIndex !== -1) {
+          productKey = productIndex;
+        }
+      } else if (typeof currentProducts === 'object') {
+        // Find the key in the object
+        for (const [key, prod] of Object.entries(currentProducts)) {
+          if (prod && (prod as any).id === product.id) {
+            productKey = key;
+            break;
+          }
+        }
+      }
+
+      if (productKey === null) {
         throw new Error("Product not found in database for update.");
       }
 
@@ -258,8 +322,8 @@ export default function AdminEditProductPage() {
         sizes,
       };
 
-      const productAtIndexRef = ref(db, `products/products/${productIndex}`);
-      await update(productAtIndexRef, updatedProduct);
+      const productAtKeyRef = ref(db, `products/products/${productKey}`);
+      await update(productAtKeyRef, updatedProduct);
 
       toast({
         title: "Product Updated",

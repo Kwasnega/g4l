@@ -28,6 +28,7 @@ import { Skeleton } from "./ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { useStoreStatus } from "@/hooks/use-store-status";
 import { db } from "@/lib/firebase";
 import { ref, push, set } from "firebase/database";
 import { initializePaystackTransaction } from "@/lib/actions";
@@ -49,6 +50,7 @@ export function CheckoutForm() {
   const { items, isInitialized } = useCart();
   const { user, isFirebaseConfigured, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
+  const { isStoreOpen, isLoading: isStoreLoading } = useStoreStatus();
 
   const [displayItems, setDisplayItems] = useState<CartDisplayItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -103,6 +105,16 @@ export function CheckoutForm() {
   async function onSubmit(data: CheckoutFormValues) {
     if (!user || !db) {
       toast({ variant: "destructive", title: "Error", description: "Could not place order. Please make sure you are logged in." });
+      return;
+    }
+
+    // Check if store is open before processing order
+    if (!isStoreOpen) {
+      toast({
+        variant: "destructive",
+        title: "Store Closed",
+        description: "The G4L store is currently closed. Please try again later."
+      });
       return;
     }
 
@@ -166,8 +178,21 @@ export function CheckoutForm() {
     }
   }
 
-  if (isAuthLoading || (isFirebaseConfigured && !isInitialized)) {
+  if (isAuthLoading || isStoreLoading || (isFirebaseConfigured && !isInitialized)) {
     return <CheckoutFormSkeleton />;
+  }
+
+  // Show store closed message if store is closed
+  if (!isStoreOpen) {
+    return (
+        <Alert variant="destructive">
+            <Info className="h-4 w-4" />
+            <AlertTitle>Store Closed</AlertTitle>
+            <AlertDescription>
+                The G4L store is currently closed. Please check back later or contact us for more information.
+            </AlertDescription>
+        </Alert>
+    )
   }
 
   if (isFirebaseConfigured && !user) {
@@ -183,12 +208,12 @@ export function CheckoutForm() {
   }
 
   return (
-    <div className="grid md:grid-cols-2 gap-12">
-      <div className="md:col-span-1">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12">
+      <div className="lg:col-span-1">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="space-y-4">
-                <h2 className="text-2xl font-semibold">Delivery Information</h2>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 sm:space-y-8">
+            <div className="space-y-3 sm:space-y-4">
+                <h2 className="text-xl sm:text-2xl font-semibold">Delivery Information</h2>
                 <FormField
                   control={form.control}
                   name="fullName"
@@ -246,8 +271,8 @@ export function CheckoutForm() {
                 />
             </div>
             
-            <div className="space-y-4">
-                <h2 className="text-2xl font-semibold">Delivery Method</h2>
+            <div className="space-y-3 sm:space-y-4">
+                <h2 className="text-xl sm:text-2xl font-semibold">Delivery Method</h2>
                 <FormField
                   control={form.control}
                   name="deliveryMethod"

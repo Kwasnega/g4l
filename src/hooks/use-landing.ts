@@ -19,6 +19,7 @@ type LandingContextType = {
 const LandingContext = createContext<LandingContextType | undefined>(undefined);
 
 export function LandingProvider({ children }: { children: ReactNode }) {
+  // Start with landing active - the component will check sessionStorage and hide if needed
   const [isLandingActive, setIsLandingActive] = useState(true);
 
   const showLanding = useCallback(() => {

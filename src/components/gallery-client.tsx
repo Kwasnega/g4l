@@ -3,7 +3,8 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Eye } from "lucide-react";
 import type { GalleryImage } from "@/types";
 
@@ -43,6 +44,9 @@ export function GalleryClient({ images }: GalleryClientProps) {
       </div>
       <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
         <DialogContent className="p-0 border-0 max-w-5xl bg-transparent shadow-none">
+          <VisuallyHidden>
+            <DialogTitle>Gallery Image View</DialogTitle>
+          </VisuallyHidden>
           {selectedImage && (
             <Image
               src={selectedImage.url}

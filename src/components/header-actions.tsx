@@ -23,8 +23,11 @@ import {
   Sheet,
   SheetContent,
   SheetTrigger,
-  SheetClose
-} from "@/components/ui/sheet"
+  SheetClose,
+  SheetHeader,
+  SheetTitle
+} from "@/components/ui/sheet";
+import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -121,7 +124,12 @@ export function HeaderActions() {
               <span className="sr-only">Toggle Navigation Menu</span>
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-full max-w-xs">
+        <SheetContent side="right" className="w-full max-w-xs">
+          <SheetHeader>
+            <VisuallyHidden>
+              <SheetTitle>Navigation Menu</SheetTitle>
+            </VisuallyHidden>
+          </SheetHeader>
           <nav className="flex flex-col gap-6 text-lg font-medium mt-8">
             <SheetClose asChild>
               <Link href="/" className="transition-colors hover:text-foreground/80">Home</Link>
@@ -142,8 +150,9 @@ export function HeaderActions() {
 
     return (
         <>
-            <div className="flex items-center gap-4">
-              <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center gap-4">
+              <nav className="flex items-center gap-6 text-sm font-medium">
                   <Link href="/" className="transition-colors hover:text-foreground/80">Home</Link>
                   <Link href="/products" className="font-semibold transition-colors hover:text-foreground/80">Shop</Link>
                   <Link href="/gallery" className="transition-colors hover:text-foreground/80">Gallery</Link>
@@ -170,13 +179,49 @@ export function HeaderActions() {
                       )}
                   </Link>
                   </Button>
-                  
+
                   {renderAuthButton()}
 
                   <ThemeToggle />
-                  <MobileNav />
               </div>
             </div>
+
+            {/* Mobile Navigation - Icons arranged from right to left as specified */}
+            <div className="md:hidden flex items-center gap-1">
+                {/* Wishlist icon - leftmost in icon group */}
+                <Button variant="ghost" size="icon" asChild className="relative">
+                <Link href="/wishlist" aria-label="Wishlist">
+                    <Heart className="h-5 w-5" />
+                    {wishlistCount > 0 && (
+                        <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs">
+                            {wishlistCount}
+                        </Badge>
+                    )}
+                </Link>
+                </Button>
+
+                {/* Cart icon - left of account icon */}
+                <Button variant="ghost" size="icon" asChild className="relative" data-cart-icon>
+                <Link href="/cart" aria-label="Shopping Bag">
+                    <ShoppingBag className="h-5 w-5" />
+                    {cartCount > 0 && (
+                        <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 rounded-full text-xs">
+                            {cartCount}
+                        </Badge>
+                    )}
+                </Link>
+                </Button>
+
+                {/* Account icon - left of dark mode */}
+                {renderAuthButton()}
+
+                {/* Dark mode icon - left of dropdown menu */}
+                <ThemeToggle />
+
+                {/* Dropdown menu icon - far right */}
+                <MobileNav />
+            </div>
+
             <AuthDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} />
         </>
     )
